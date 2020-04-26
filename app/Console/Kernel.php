@@ -2,6 +2,8 @@
 
 namespace App\Console;
 
+use App\Console\Commands\GithubAllUsersParseCommand;
+use App\Console\Commands\GithubUsersUpdateCommand;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
@@ -13,7 +15,8 @@ class Kernel extends ConsoleKernel
      * @var array
      */
     protected $commands = [
-        //
+        GithubAllUsersParseCommand::class,
+        GithubUsersUpdateCommand::class
     ];
 
     /**
@@ -24,8 +27,7 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        // $schedule->command('inspire')
-        //          ->hourly();
+        $schedule->command('github:parse:users')->hourly();
     }
 
     /**

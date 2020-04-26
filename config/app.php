@@ -1,5 +1,8 @@
 <?php
 
+use App\Providers\RepositoryServiceProvider;
+use App\Providers\RouteServiceProvider;
+
 return [
 
     /*
@@ -166,6 +169,7 @@ return [
          * Package Service Providers...
          */
         Barryvdh\TranslationManager\ManagerServiceProvider::class,
+        OwenIt\Auditing\AuditingServiceProvider::class,
 
         /*
          * Application Service Providers...
@@ -175,6 +179,8 @@ return [
         // App\Providers\BroadcastServiceProvider::class,
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
+        App\Providers\RepositoryServiceProvider::class,
+        App\Providers\GatewayServiceProvider::class,
 
     ],
 
