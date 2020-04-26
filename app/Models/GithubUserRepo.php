@@ -2,9 +2,18 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property bool language_update_at
+ * @property Carbon created_at
+ * @property Carbon updated_at
+ * @property mixed last_language_modified
+ * @property mixed owner
+ * @property mixed name
+ */
 class GithubUserRepo extends BaseModel
 {
 
@@ -32,7 +41,9 @@ class GithubUserRepo extends BaseModel
         'archived',
         'disabled',
         'subscribers_count',
-        'pushed_at'
+        'pushed_at',
+        'language_update_at',
+        'last_language_modified'
     ];
 
     /**
@@ -40,15 +51,16 @@ class GithubUserRepo extends BaseModel
      */
     protected $dates = [
         'pushed_at',
-        'deleted_at'
+        'deleted_at',
+        'language_update_at'
     ];
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasOne
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function owner()
     {
-        return $this->hasOne(GithubUser::class, 'owner_id', 'id');
+        return $this->belongsTo(GithubUser::class, 'owner_id', 'id');
     }
 
     /**

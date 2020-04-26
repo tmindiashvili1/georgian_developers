@@ -23,7 +23,7 @@ class CreateGithubUserReposTable extends Migration
             $table->string('repo_id')->unique()->index()->nullable();
             $table->string('node_id')->unique()->nullable();
             $table->string('name')->nullable();
-            $table->string('full_name')->unique()->nullable();
+            $table->string('full_name')->nullable();
 
             // Repo info.
             $table->text('description')->nullable();
@@ -37,8 +37,10 @@ class CreateGithubUserReposTable extends Migration
             $table->boolean('disabled')->default(0)->nullable();
             $table->integer('subscribers_count')->default(1)->nullable();
             $table->string('etag')->nullable();
+            $table->string('last_language_modified')->nullable();
 
             $table->dateTimeTz('pushed_at')->nullable();
+            $table->dateTime('language_update_at')->nullable();
             $table->timestamps();
             $table->softDeletes();
 

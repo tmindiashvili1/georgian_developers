@@ -39,6 +39,7 @@ class CreateGithubUsersTable extends Migration
 
             //Dates
             $table->dateTime('user_info_update_at')->nullable();
+            $table->dateTime('repo_update_at')->nullable();
 
 
             $table->timestamps();

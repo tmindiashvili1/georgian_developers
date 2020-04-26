@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * @property mixed last_modified
+ * @property Carbon created_at
+ * @property Carbon updated_at
  */
 class GithubUser extends BaseModel
 {
@@ -42,14 +45,15 @@ class GithubUser extends BaseModel
         'last_modified',
 
         // Date
-        'user_info_update_at'
+        'user_info_update_at',
+        'repo_update_at'
     ];
 
     /**
      * @var array
      */
     protected $dates = [
-        'deleted_at', 'user_info_update_at'
+        'deleted_at', 'user_info_update_at','repo_update_at'
     ];
 
     /**

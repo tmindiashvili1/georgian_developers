@@ -6,6 +6,8 @@ use App\Gateways\Github\IGithubGateway;
 use App\Models\GithubUser;
 use App\Repositories\Contracts\IGithubUserRepository;
 use App\Services\Contracts\IGithubUserParserService;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -109,6 +111,7 @@ class GithubUserParserService implements IGithubUserParserService
         }
 
         try {
+            DB::beginTransaction();
 
             if ( !empty($response['headers']['Last-Modified']) && $response['headers']['Last-Modified'][0] == $lastModified) {
                 return;
@@ -117,7 +120,9 @@ class GithubUserParserService implements IGithubUserParserService
             // Save github user full info.
             $this->saveGithubUserFullInfo($response['data'], $response['headers']);
 
+            DB::commit();
         } catch (\Exception $ex) {
+            DB::rollBack();
             Log::error('ERROR_SAVE_GITHUB_USER_FULL_INFO', [ 'user_response' => $response['data']]);
             throw new \Exception('ERROR_SAVE_GITHUB_USER_FULL_INFO', $ex->getCode());
         }
@@ -132,41 +137,54 @@ class GithubUserParserService implements IGithubUserParserService
      * @param $headers
      *
      * @return void
+     * @throws \Exception
      */
     public function saveGithubUserFullInfo($data, $headers = [])
     {
 
-        /**
-         *
-         * Save github user full info.
-         *
-         * @var $githubUser GithubUser
-         */
-        $githubUser = $this->githubUserRepository->updateOrCreate([
-            'login'                 => $data['login'],
-            'github_user_id'        => $data['id'],
-            'node_id'               => $data['node_id']
-        ],[
-            'avatar_url'            => $data['avatar_url'],
-            'name'                  => $data['name'],
-            'company'               => $data['company'],
-            'website'               => $data['blog'],
-            'location'              => $data['location'],
-            'email'                 => $data['email'],
-            'hireable'              => $data['hireable'],
-            'bio'                   => $data['bio'],
-            'followers'             => $data['followers'],
-            'following'             => $data['following'],
-            'user_info_update_at'   => now()->addWeeks(2)
-        ]);
+        try {
 
-        if (!empty($headers['ETag'])) {
-            $githubUser->update(['etag' => trim($headers["ETag"][0],'"')]);
+            /**
+             *
+             * Save github user full info.
+             *
+             * @var $githubUser GithubUser
+             */
+            $githubUser = $this->githubUserRepository->updateOrCreate([
+                'login'                 => $data['login'],
+                'github_user_id'        => $data['id'],
+                'node_id'               => $data['node_id']
+            ],[
+                'avatar_url'            => $data['avatar_url'],
+                'name'                  => $data['name'],
+                'company'               => $data['company'],
+                'website'               => $data['blog'],
+                'location'              => $data['location'],
+                'email'                 => $data['email'],
+                'hireable'              => $data['hireable'],
+                'bio'                   => $data['bio'],
+                'followers'             => $data['followers'],
+                'following'             => $data['following'],
+                'user_info_update_at'   => now()->addWeeks(2)
+            ]);
+
+            if (!empty($headers['ETag'])) {
+                $githubUser->update(['etag' => trim($headers["ETag"][0],'"')]);
+            }
+
+            if (!empty($headers['Last-Modified'])) {
+                $githubUser->update(['last_modified' => $headers['Last-Modified'][0]]);
+            }
+
+            $githubUser->created_at = Carbon::parse($data['created_at']);
+            $githubUser->updated_at = Carbon::parse($data['updated_at']);
+            $githubUser->save();
+
+        } catch (\Exception $ex) {
+            Log::error('ERROR_SAVE_GITHUB_USER_FULL_INFORMATION', [ 'data' => $data]);
+            throw new \Exception('ERROR_SAVE_GITHUB_USER_FULL_INFORMATION', $ex->getCode());
         }
 
-        if (!empty($headers['Last-Modified'])) {
-            $githubUser->update(['last_modified' => $headers['Last-Modified'][0]]);
-        }
 
     }
 
@@ -178,13 +196,12 @@ class GithubUserParserService implements IGithubUserParserService
 
         foreach(config('github.locations') as $locationName) {
 
-            $existData = true;
             $page = 1;
 
             /**
              * While exist data, filter location per page.
              */
-            while($existData) {
+            while(true) {
 
                 $filterData = [
                     'q'         => 'location:' . $locationName,
@@ -231,8 +248,15 @@ class GithubUserParserService implements IGithubUserParserService
 
         foreach ( $items as $item ) {
 
-            // Save github user.
-            $this->saveGithubUserBaseData($item);
+
+            try {
+
+                // Save github user.
+                $this->saveGithubUserBaseData($item);
+
+            } catch (\Exception $ex) {
+                continue;
+            }
 
         }
 
@@ -244,26 +268,44 @@ class GithubUserParserService implements IGithubUserParserService
      * @param $userItem
      *
      * @return GithubUser
+     * @throws \Exception
      */
     public function saveGithubUserBaseData($userItem)
     {
 
-        /**
-         * @var $githubUser GithubUser
-         */
-        $githubUser = $this->githubUserRepository->updateOrCreate([
-            'login'                 => $userItem['login'],
-            'github_user_id'        => $userItem['id'],
-            'node_id'               => $userItem['node_id']
-        ],[
-            'avatar_url'            => $userItem['avatar_url']
-        ]);
+        try {
 
-        if ( $githubUser->wasRecentlyCreated ) {
-            $githubUser->update(['user_info_update_at'      => now()->addMinutes(10)]);
+            DB::beginTransaction();
+
+            /**
+             * @var $githubUser GithubUser
+             */
+            $githubUser = $this->githubUserRepository->updateOrCreate([
+                'login'                 => $userItem['login'],
+                'github_user_id'        => $userItem['id'],
+                'node_id'               => $userItem['node_id']
+            ],[
+                'avatar_url'            => $userItem['avatar_url']
+            ]);
+
+            if ( $githubUser->wasRecentlyCreated ) {
+                $githubUser->update([
+                    'repo_update_at'            => now()->addMinutes(30),
+                    'user_info_update_at'       => now()->addMinutes(10)
+                ]);
+            }
+
+            DB::commit();
+
+            return $githubUser;
+
+        } catch (\Exception $ex)  {
+            DB::rollBack();
+            Log::error('ERROR_SAVE_GITHUB_USER_BASE_DATA', [ 'user_item' => $userItem]);
+            throw new \Exception('ERROR_SAVE_GITHUB_USER_BASE_DATA', $ex->getCode());
         }
 
-        return $githubUser;
+
     }
 
 }

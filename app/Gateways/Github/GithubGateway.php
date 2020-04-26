@@ -48,6 +48,37 @@ class GithubGateway extends BaseGateway implements IGithubGateway
 
     /**
      * @param $login
+     * @param array $params
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function getUserRepos($login,$params = [])
+    {
+
+        $this->endPoint = '/users/' . $login . '/repos';
+        $this->method = 'GET';
+        $this->params = $params;
+        $this->requestOption = 'query';
+
+        // Do request
+        $this->doRequest();
+    }
+
+    /**
+     * @param $login
+     * @param $repo
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function getRepoLanguages($login, $repo)
+    {
+        $this->endPoint = '/repos/' . $login . '/' . $repo . '/languages';
+        $this->method = 'GET';
+
+        // Do request
+        $this->doRequest();
+    }
+
+    /**
+     * @param $login
      * @throws \GuzzleHttp\Exception\GuzzleException
      */
     public function getUserFullInfo($login)
